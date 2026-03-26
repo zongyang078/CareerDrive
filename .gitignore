@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (keep raw, ignore large processed files)
+data/processed/*.csv
+data/processed/*.pkl
+!data/processed/.gitkeep
+
+# Outputs (generated files)
+outputs/*.html
+outputs/*.png
+!outputs/.gitkeep
