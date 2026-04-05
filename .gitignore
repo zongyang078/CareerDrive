@@ -20,11 +20,7 @@ build/
 Thumbs.db
 
 # Data (keep raw, ignore large processed files)
-data/processed/*.csv
 data/processed/*.pkl
-!data/processed/.gitkeep
 
 # Outputs (generated files)
 outputs/*.html
-outputs/*.png
-!outputs/.gitkeep
