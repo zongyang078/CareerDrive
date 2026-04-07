@@ -1,10 +1,10 @@
 """
-CareerDrive Streamlit Demo
+CareerDrive Streamlit Demo — Refactored
 
 Three pages:
-1. Industry Dashboard — descriptive stats and landscape overview
+1. Industry Dashboard — descriptive stats, company landscape, supply-demand gap
 2. Clustering Explorer — interactive PCA scatter plot with cluster details
-3. Career Match — input skills, get matched occupations
+3. Career Match — input skills, get matched occupations + training pathways
 
 Run with: streamlit run app/streamlit_app.py
 """
@@ -24,6 +24,13 @@ from sklearn.decomposition import PCA
 # --- Page Config ---
 st.set_page_config(page_title="CareerDrive", page_icon="\U0001f6e4\ufe0f", layout="wide")
 
+# --- Consistent Color Palette ---
+CLUSTER_COLORS = {
+    'Management/Engineering': '#2E86AB',
+    'Skilled Trades': '#1B998B',
+    'Entry Level/Operators': '#E8593C',
+}
+
 # --- Load Data ---
 @st.cache_data
 def load_data():
@@ -35,6 +42,7 @@ def load_data():
     apprentice = pd.read_csv('data/processed/apprenticeships.csv')
     cc = pd.read_csv('data/processed/community_college.csv')
     umaine = pd.read_csv('data/processed/umaine_programs.csv')
+    companies = pd.read_csv('data/processed/companies_merged.csv')
 
     titles = features['Title']
     X_raw = features.drop(columns='Title')
@@ -44,29 +52,89 @@ def load_data():
     pca = PCA(n_components=2).fit(X_scaled)
     pca2 = pca.transform(X_scaled)
 
+    # Manual mappings for gap analysis
+    apprentice_to_onet = {
+        'Arborist': None,
+        'Bridge Carpenter/Heavy Highway': '47-2031.00',
+        'Construction Carpenter': '47-2031.00',
+        'Construction Craft Concrete Laborer': None,
+        'Construction Craft Heavy / Highway Laborer': None,
+        'Construction Equipment Operator': '47-2073.00',
+        'Construction Specialist': None,
+        'Crane Mechanic': None,
+        'Crane Operator': '47-2073.00',
+        'Earthworks Laborer': None,
+        'Electrician': '47-2111.00',
+        'Fencing Installer': None,
+        'Firestopping Installer': None,
+        'Firestopping Technician': None,
+        'Foreman': '47-1011.00',
+        'Lead Logging Equipment Operator': None,
+        'Marine Carpenter - Heavy Civil': '47-2031.00',
+        'Solar Mechanical Installation Technician': None,
+        'Welder': None,
+    }
+    apprentice['onet_match'] = apprentice['title'].map(apprentice_to_onet)
+
+    cc_to_cluster = {
+        'Building Construction Technology': 'Skilled Trades',
+        'HVAC/R Technology': 'Skilled Trades',
+        'Plumbing & Heating Technology': 'Skilled Trades',
+        'Building Construction': 'Skilled Trades',
+        'Electrical Technology': 'Skilled Trades',
+        'Precision Machining Technology': 'Skilled Trades',
+        'Welding Technology': 'Skilled Trades',
+        'Heating Technology': 'Skilled Trades',
+        'Plumbing Technology': 'Skilled Trades',
+        'Electrical Lineworker Technology': 'Skilled Trades',
+        'Heavy Equipment Operations': 'Entry Level/Operators',
+        'Civil Engineering Technology': 'Management/Engineering',
+        'Engineering Technology': 'Management/Engineering',
+        'Architectural & Civil Engineering Technology': 'Management/Engineering',
+        'Land Surveying Technology': 'Management/Engineering',
+    }
+    cc['cluster_match'] = cc['program_name'].map(cc_to_cluster).fillna('Unmatched')
+
+    umaine_to_cluster = {
+        'Construction Engineering Technology': 'Management/Engineering',
+        'Architecture (5-Year Professional Degree)': 'Management/Engineering',
+        'Civil & Environmental Engineering': 'Management/Engineering',
+        'Mechanical Engineering': 'Management/Engineering',
+        'Electrical Engineering Technology': 'Skilled Trades',
+        'Surveying Engineering Technology': 'Management/Engineering',
+        'Facilities Management': 'Skilled Trades',
+        'Construction Management Technology': 'Management/Engineering',
+    }
+    umaine['cluster_match'] = umaine['program_name'].map(umaine_to_cluster).fillna('Unmatched')
+
     return {
         'features': features, 'clusters': clusters, 'job_zones': job_zones,
         'related': related, 'agc': agc, 'apprentice': apprentice,
-        'cc': cc, 'umaine': umaine, 'titles': titles,
-        'X_raw': X_raw, 'scaler': scaler, 'X_scaled': X_scaled,
-        'pca': pca, 'pca2': pca2,
+        'cc': cc, 'umaine': umaine, 'companies': companies,
+        'titles': titles, 'X_raw': X_raw, 'scaler': scaler,
+        'X_scaled': X_scaled, 'pca': pca, 'pca2': pca2,
     }
 
 data = load_data()
 
 # --- Sidebar Navigation ---
 st.sidebar.title("\U0001f6e4\ufe0f CareerDrive")
+st.sidebar.markdown("*Maine Construction Industry Career Map*")
 page = st.sidebar.radio("Navigate", ["Industry Dashboard", "Clustering Explorer", "Career Match"])
+st.sidebar.divider()
+st.sidebar.markdown("DS 5230 — Unsupervised ML")
+st.sidebar.markdown("Spring 2026 Final Project")
 
 # ================================================================
 # PAGE 1: INDUSTRY DASHBOARD
 # ================================================================
 if page == "Industry Dashboard":
-    st.title("Maine Construction Industry Overview")
-    st.markdown("A snapshot of the workforce ecosystem: companies, occupations, and training programs.")
+    st.title("\U0001f3d7\ufe0f Maine Construction Industry Overview")
+    st.markdown("A snapshot of the workforce ecosystem: companies, occupations, training programs, and workforce gaps.")
 
+    # Key metrics
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Companies", len(data['agc']))
+    col1.metric("Companies", len(data['companies']))
     col2.metric("Occupations", len(data['clusters']))
     col3.metric("Apprenticeships", len(data['apprentice']))
     col4.metric("Education Programs", len(data['cc']) + len(data['umaine']))
@@ -77,11 +145,13 @@ if page == "Industry Dashboard":
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("Companies by Type")
-        company_counts = data['agc']['type'].value_counts().reset_index()
+        company_counts = data['companies']['type'].value_counts().reset_index()
         company_counts.columns = ['Type', 'Count']
         fig = px.bar(company_counts, x='Type', y='Count', color='Type',
-                     color_discrete_sequence=px.colors.qualitative.Set2)
+                     color_discrete_sequence=px.colors.qualitative.Set2,
+                     text='Count')
         fig.update_layout(showlegend=False, height=350)
+        fig.update_traces(textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -89,44 +159,103 @@ if page == "Industry Dashboard":
         cluster_counts = data['clusters']['cluster_name'].value_counts().reset_index()
         cluster_counts.columns = ['Cluster', 'Count']
         fig = px.pie(cluster_counts, values='Count', names='Cluster',
-                     color_discrete_sequence=['#2E86AB', '#E8593C', '#1B998B'])
+                     color='Cluster', color_discrete_map=CLUSTER_COLORS)
         fig.update_layout(height=350)
         st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
-    # Job Zone distribution
+    # Job Zone and apprenticeship info
     c3, c4 = st.columns(2)
     with c3:
         st.subheader("Occupations by Job Zone (Complexity)")
-        jz_counts = data['clusters'].groupby('Job Zone').size().reset_index(name='Count')
+        jz_data = data['clusters'].copy()
+        jz_counts = jz_data.groupby('Job Zone').size().reset_index(name='Count')
         jz_counts['Job Zone'] = jz_counts['Job Zone'].astype(str)
         fig = px.bar(jz_counts, x='Job Zone', y='Count',
-                     color='Job Zone', color_discrete_sequence=px.colors.sequential.Teal)
+                     color='Job Zone', color_discrete_sequence=px.colors.sequential.Teal,
+                     text='Count')
         fig.update_layout(showlegend=False, height=300)
+        fig.update_traces(textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
     with c4:
-        st.subheader("Apprenticeship Training Hours")
-        app_data = data['apprentice'].sort_values('term_hours', ascending=True)
-        fig = px.bar(app_data, x='term_hours', y='title', orientation='h',
-                     color='term_hours', color_continuous_scale='Teal')
-        fig.update_layout(height=400, yaxis_title='', xaxis_title='Hours',
-                          coloraxis_showscale=False)
+        st.subheader("Cluster \u00d7 Job Zone Distribution")
+        ct = pd.crosstab(data['clusters']['cluster_name'], data['clusters']['Job Zone'])
+        fig = px.imshow(ct, text_auto=True, color_continuous_scale='YlOrRd',
+                        labels=dict(x='Job Zone', y='Cluster', color='Count'))
+        fig.update_layout(height=300)
         st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
-    # Education programs
+    # Supply-Demand Gap Analysis
+    st.subheader("\U0001f4ca Supply-Demand Gap Analysis")
+    st.markdown("""
+    The **demand** side represents the 20 key occupations across 3 clusters.
+    The **supply** side represents available training pathways (apprenticeships + education programs).
+    """)
+
+    cluster_map = dict(zip(data['clusters']['O*NET-SOC Code'], data['clusters']['cluster_name']))
+    codes_with_app = data['apprentice'].dropna(subset=['onet_match'])['onet_match'].unique()
+    all_programs = pd.concat([
+        data['cc'][data['cc']['cluster_match'] != 'Unmatched'][['program_name', 'cluster_match']].rename(
+            columns={'program_name': 'program', 'cluster_match': 'cluster'}),
+        data['umaine'][data['umaine']['cluster_match'] != 'Unmatched'][['program_name', 'cluster_match']].rename(
+            columns={'program_name': 'program', 'cluster_match': 'cluster'}),
+    ])
+
+    gap_rows = []
+    for c_name in ['Management/Engineering', 'Skilled Trades', 'Entry Level/Operators']:
+        cluster_codes = data['clusters'][data['clusters']['cluster_name'] == c_name]['O*NET-SOC Code']
+        n_occ = len(cluster_codes)
+        n_app = sum(1 for c in cluster_codes if c in codes_with_app)
+        n_edu = len(all_programs[all_programs['cluster'] == c_name])
+        gap_rows.append({
+            'Cluster': c_name, 'Occupations': n_occ,
+            'Apprenticeships': n_app, 'Education Programs': n_edu,
+            'Total Supply': n_app + n_edu,
+            'Coverage Ratio': round((n_app + n_edu) / n_occ, 2) if n_occ else 0
+        })
+    gap_df = pd.DataFrame(gap_rows)
+
+    g1, g2 = st.columns(2)
+    with g1:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name='Occupations (Demand)', x=gap_df['Cluster'],
+                             y=gap_df['Occupations'], marker_color='#2E86AB'))
+        fig.add_trace(go.Bar(name='Apprenticeships', x=gap_df['Cluster'],
+                             y=gap_df['Apprenticeships'], marker_color='#1B998B'))
+        fig.add_trace(go.Bar(name='Education Programs', x=gap_df['Cluster'],
+                             y=gap_df['Education Programs'], marker_color='#4CAF50'))
+        fig.update_layout(barmode='group', height=350, title='Supply vs Demand by Cluster')
+        st.plotly_chart(fig, use_container_width=True)
+
+    with g2:
+        colors = ['#E8593C' if r < 1.0 else '#4CAF50' for r in gap_df['Coverage Ratio']]
+        fig = go.Figure(go.Bar(x=gap_df['Cluster'], y=gap_df['Coverage Ratio'],
+                               marker_color=colors, text=gap_df['Coverage Ratio']))
+        fig.add_hline(y=1.0, line_dash='dash', annotation_text='1:1 Ratio')
+        fig.update_layout(height=350, title='Training Coverage Ratio',
+                          yaxis_title='Supply / Demand')
+        fig.update_traces(textposition='outside')
+        st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("View detailed gap table"):
+        st.dataframe(gap_df, hide_index=True, use_container_width=True)
+
+    st.divider()
+
+    # Education programs table
     st.subheader("Education Programs")
     e1, e2 = st.columns(2)
     with e1:
         st.markdown("**Community College Programs**")
-        st.dataframe(data['cc'][['college', 'program_name', 'credentials']],
+        st.dataframe(data['cc'][['college', 'program_name', 'credentials', 'cluster_match']],
                      hide_index=True, use_container_width=True)
     with e2:
         st.markdown("**UMaine Programs**")
-        st.dataframe(data['umaine'][['campus', 'program_name', 'degree_type']],
+        st.dataframe(data['umaine'][['campus', 'program_name', 'degree_type', 'cluster_match']],
                      hide_index=True, use_container_width=True)
 
 
@@ -134,7 +263,7 @@ if page == "Industry Dashboard":
 # PAGE 2: CLUSTERING EXPLORER
 # ================================================================
 elif page == "Clustering Explorer":
-    st.title("Occupation Clustering Analysis")
+    st.title("\U0001f50d Occupation Clustering Analysis")
     st.markdown("20 construction occupations clustered by 120 skill/knowledge/ability features using PCA + K-Means.")
 
     # PCA scatter plot
@@ -151,17 +280,11 @@ elif page == "Clustering Explorer":
         'Code': clusters['O*NET-SOC Code'],
     })
 
-    color_map = {
-        'Management/Engineering': '#2E86AB',
-        'Skilled Trades': '#1B998B',
-        'Entry Level/Operators': '#E8593C',
-    }
-
     fig = px.scatter(plot_df, x='PC1', y='PC2', color='Cluster',
                      hover_data=['Title', 'Job Zone', 'Code'],
-                     text='Title', color_discrete_map=color_map,
-                     width=800, height=550)
-    fig.update_traces(textposition='top center', textfont_size=10, marker_size=12)
+                     text='Title', color_discrete_map=CLUSTER_COLORS,
+                     width=900, height=600)
+    fig.update_traces(textposition='top center', textfont_size=9, marker_size=12)
     fig.update_layout(
         xaxis_title=f"PC1 ({pca_obj.explained_variance_ratio_[0]:.1%} variance)",
         yaxis_title=f"PC2 ({pca_obj.explained_variance_ratio_[1]:.1%} variance)",
@@ -172,7 +295,7 @@ elif page == "Clustering Explorer":
 
     # Cluster detail
     st.subheader("Cluster Details")
-    selected_cluster = st.selectbox("Select a cluster:", list(color_map.keys()))
+    selected_cluster = st.selectbox("Select a cluster:", list(CLUSTER_COLORS.keys()))
     cluster_members = clusters[clusters['cluster_name'] == selected_cluster]
 
     st.dataframe(
@@ -180,12 +303,11 @@ elif page == "Clustering Explorer":
         hide_index=True, use_container_width=True
     )
 
-    # Skill profile radar chart for selected cluster
+    # Skill profile radar chart
     st.subheader(f"Average Skill Profile: {selected_cluster}")
     member_codes = cluster_members['O*NET-SOC Code'].tolist()
     X_raw = data['X_raw']
 
-    # Get top 10 most distinguishing features for this cluster
     cluster_mean = X_raw.loc[member_codes].mean()
     overall_mean = X_raw.mean()
     diff = (cluster_mean - overall_mean).sort_values(ascending=False)
@@ -200,15 +322,16 @@ elif page == "Clustering Explorer":
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
         r=radar_data[selected_cluster], theta=radar_data['Feature'],
-        fill='toself', name=selected_cluster, fillcolor='rgba(46,134,171,0.3)',
-        line_color='#2E86AB',
+        fill='toself', name=selected_cluster,
+        fillcolor=f"rgba({','.join(str(int(CLUSTER_COLORS[selected_cluster][i:i+2], 16)) for i in (1,3,5))},0.3)",
+        line_color=CLUSTER_COLORS[selected_cluster],
     ))
     fig.add_trace(go.Scatterpolar(
         r=radar_data['Overall Average'], theta=radar_data['Feature'],
         fill='toself', name='Overall Average', fillcolor='rgba(200,200,200,0.2)',
         line_color='#999999',
     ))
-    fig.update_layout(polar=dict(radialaxis=dict(range=[0, 5])), height=400)
+    fig.update_layout(polar=dict(radialaxis=dict(range=[0, 5])), height=450)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -216,15 +339,13 @@ elif page == "Clustering Explorer":
 # PAGE 3: CAREER MATCH
 # ================================================================
 elif page == "Career Match":
-    st.title("Career Match Tool")
-    st.markdown("Select your skills and experience level to find matching construction careers.")
+    st.title("\U0001f3af Career Match Tool")
+    st.markdown("Select your skills and experience level to find matching construction careers in Maine.")
 
-    # Group features by category for cleaner UI
     X_raw = data['X_raw']
     skill_cols = [c for c in X_raw.columns if c.startswith('skill_')]
     knowledge_cols = [c for c in X_raw.columns if c.startswith('knowledge_')]
 
-    # Let user pick top skills
     st.subheader("1. Select your top skills")
     skill_names = [c.replace('skill_', '') for c in skill_cols]
     selected_skills = st.multiselect("Choose skills you're strong at (pick 3-7):",
@@ -240,7 +361,6 @@ elif page == "Career Match":
                           help="1 = Beginner, 3 = Intermediate, 5 = Expert")
 
     if st.button("Find Matching Careers", type="primary"):
-        # Build user vector
         user_skills = {}
         for s in selected_skills:
             user_skills[f'skill_{s}'] = exp_level
@@ -250,7 +370,6 @@ elif page == "Career Match":
         if len(user_skills) < 2:
             st.warning("Please select at least 2 skills or knowledge areas.")
         else:
-            # Compute similarity on selected dimensions only
             valid_features = [f for f in user_skills.keys() if f in X_raw.columns]
             X_sub = X_raw[valid_features]
             user_vec = pd.Series(user_skills)[valid_features].values.reshape(1, -1)
@@ -271,16 +390,18 @@ elif page == "Career Match":
             st.divider()
             st.subheader("Your Top Matches")
 
-            # Top 5 results
+            # Top 5 results with training info
             top5 = results.head(5)
-            for i, (_, row) in enumerate(top5.iterrows()):
+            codes_with_app = data['apprentice'].dropna(subset=['onet_match'])['onet_match'].unique()
+
+            for i, (code, row) in enumerate(top5.iterrows()):
                 col1, col2, col3 = st.columns([3, 2, 1])
                 col1.markdown(f"**{i+1}. {row['Occupation']}**")
-                col2.markdown(f"`{row['Cluster']}` | Job Zone {row['Job Zone']}")
+                has_app = "\u2705" if code in codes_with_app else "\u274c"
+                col2.markdown(f"`{row['Cluster']}` | Job Zone {row['Job Zone']} | Apprenticeship: {has_app}")
                 col3.metric("Match", f"{row['Match Score']}%")
 
             st.divider()
 
-            # Full ranking table
             with st.expander("View all occupations ranked"):
                 st.dataframe(results, hide_index=True, use_container_width=True)
