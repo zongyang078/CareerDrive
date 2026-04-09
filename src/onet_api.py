@@ -20,23 +20,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE_URL = "https://services.onetcenter.org/ws"
+BASE_URL = "https://api-v2.onetcenter.org"
 
 
 class ONetClient:
-    """Lightweight wrapper around the O*NET Web Services REST API."""
+    """Lightweight wrapper around the O*NET Web Services REST API v2."""
 
-    def __init__(self, username: str = None, password: str = None):
-        self.username = username or os.getenv("ONET_USERNAME")
-        self.password = password or os.getenv("ONET_PASSWORD")
-        if not self.username or not self.password:
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or os.getenv("ONET_API_KEY")
+        if not self.api_key:
             raise ValueError(
-                "O*NET credentials not found. "
-                "Set ONET_USERNAME and ONET_PASSWORD in .env file."
+                "O*NET API key not found. "
+                "Set ONET_API_KEY in .env file."
             )
         self.session = requests.Session()
-        self.session.auth = (self.username, self.password)
-        self.session.headers.update({"Accept": "application/json"})
+        self.session.headers.update({
+            "X-API-Key": self.api_key,
+            "Accept": "application/json",
+        })
 
     def _get(self, endpoint: str) -> dict:
         """Make a GET request with rate limiting."""
