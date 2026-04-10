@@ -1,0 +1,21 @@
+O*NET-SOC Code,Title,Cluster,Job Zone,Degree,Betweenness,Closeness,PageRank
+47-2221.00,Structural Iron and Steel Workers,Entry Level/Operators,2,10,0.2408,0.5588,0.0868
+47-2151.00,Pipelayers,Entry Level/Operators,2,8,0.1027,0.475,0.0691
+47-4061.00,Rail-Track Laying and Maintenance Equipment Operators,Entry Level/Operators,2,6,0.0913,0.5,0.0555
+47-2152.00,"Plumbers, Pipefitters, and Steamfitters",Skilled Trades,3,6,0.0358,0.4634,0.0551
+47-2031.00,Carpenters,Skilled Trades,2,6,0.0328,0.4634,0.0534
+47-2132.00,"Insulation Workers, Mechanical",Entry Level/Operators,2,6,0.0328,0.4634,0.0534
+11-9021.00,Construction Managers,Management/Engineering,4,5,0.0539,0.3878,0.0577
+47-4051.00,Highway Maintenance Workers,Entry Level/Operators,2,5,0.1777,0.4524,0.05
+47-2171.00,Reinforcing Iron and Rebar Workers,Entry Level/Operators,2,5,0.001,0.4043,0.045
+47-2111.00,Electricians,Skilled Trades,3,5,0.2443,0.5,0.0475
+47-2081.00,Drywall and Ceiling Tile Installers,Entry Level/Operators,2,5,0.001,0.4043,0.045
+47-2072.00,Pile Driver Operators,Entry Level/Operators,2,5,0.054,0.4872,0.0479
+47-2071.00,"Paving, Surfacing, and Tamping Equipment Operators",Entry Level/Operators,2,5,0.0372,0.4524,0.0479
+17-2051.00,Civil Engineers,Management/Engineering,4,5,0.0539,0.3878,0.0577
+47-2073.00,Operating Engineers and Other Construction Equipment Operators,Entry Level/Operators,2,4,0.0,0.3958,0.0401
+47-1011.00,First-Line Supervisors of Construction Trades and Extraction Workers,Skilled Trades,3,4,0.2068,0.4222,0.0456
+17-2051.01,Transportation Engineers,Management/Engineering,4,4,0.1426,0.3878,0.0461
+11-9041.00,Architectural and Engineering Managers,Management/Engineering,5,3,0.0,0.322,0.0369
+11-3013.00,Facilities Managers,Skilled Trades,3,3,0.0,0.3393,0.0368
+47-4021.00,Elevator and Escalator Installers and Repairers,Skilled Trades,3,2,0.0,0.3725,0.0227

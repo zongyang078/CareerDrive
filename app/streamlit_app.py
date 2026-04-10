@@ -334,6 +334,135 @@ elif page == "Clustering Explorer":
     fig.update_layout(polar=dict(radialaxis=dict(range=[0, 5])), height=450)
     st.plotly_chart(fig, use_container_width=True)
 
+    st.divider()
+
+    # === Career Path Network Graph ===
+    st.subheader("🗺️ Career Path Network")
+    st.markdown("Nodes are occupations, edges from O\\*NET Related Occupations + cosine similarity (≥0.95). "
+                "Node size reflects Job Zone complexity.")
+
+    import networkx as nx
+
+    related = data['related']
+    features_df = data['features']
+    our_codes = features_df.index.tolist()
+    title_lookup = dict(zip(data['clusters']['O*NET-SOC Code'], data['clusters']['Title']))
+    zone_lookup = dict(zip(data['clusters']['O*NET-SOC Code'], data['clusters']['Job Zone']))
+    cluster_lookup = dict(zip(data['clusters']['O*NET-SOC Code'], data['clusters']['cluster_name']))
+
+    # Build graph
+    G = nx.Graph()
+    for code in our_codes:
+        G.add_node(code)
+
+    for _, row in related.iterrows():
+        src, dst = row['O*NET-SOC Code'], row['Related O*NET-SOC Code']
+        if src in our_codes and dst in our_codes:
+            G.add_edge(src, dst, source='onet')
+
+    # Add cosine similarity edges
+    cos_sim = pd.read_csv('data/processed/cosine_similarity.csv', index_col=0)
+    for i, c1 in enumerate(our_codes):
+        for j, c2 in enumerate(our_codes):
+            if i >= j:
+                continue
+            if c1 in cos_sim.index and c2 in cos_sim.columns:
+                if cos_sim.loc[c1, c2] >= 0.95 and not G.has_edge(c1, c2):
+                    G.add_edge(c1, c2, source='similarity')
+
+    # Structured layout: X = cluster column, Y = Job Zone row
+    cluster_x = {'Entry Level/Operators': 0, 'Skilled Trades': 1, 'Management/Engineering': 2}
+
+    # Within each cluster × job zone cell, spread nodes horizontally
+    from collections import defaultdict
+    cell_counts = defaultdict(int)
+    pos = {}
+    for code in our_codes:
+        cname = cluster_lookup.get(code, 'Skilled Trades')
+        jz = zone_lookup.get(code, 2)
+        cx = cluster_x[cname]
+        cell_key = (cx, jz)
+        offset = cell_counts[cell_key] * 0.15
+        cell_counts[cell_key] += 1
+        pos[code] = (cx + offset - 0.15, jz)
+
+    # Build Plotly edge traces
+    edge_traces = []
+    for src, dst, edata in G.edges(data=True):
+        x0, y0 = pos[src]
+        x1, y1 = pos[dst]
+        color = 'rgba(100,100,100,0.4)' if edata.get('source') == 'onet' else 'rgba(100,100,100,0.15)'
+        width = 1.5 if edata.get('source') == 'onet' else 0.5
+        edge_traces.append(go.Scatter(
+            x=[x0, x1, None], y=[y0, y1, None],
+            mode='lines', line=dict(width=width, color=color),
+            hoverinfo='none', showlegend=False,
+        ))
+
+    # One trace per cluster for legend
+    node_traces = []
+    for cname, color in CLUSTER_COLORS.items():
+        codes_in = [c for c in our_codes if cluster_lookup.get(c) == cname]
+        node_traces.append(go.Scatter(
+            x=[pos[c][0] for c in codes_in],
+            y=[pos[c][1] for c in codes_in],
+            mode='markers+text',
+            marker=dict(
+                size=[zone_lookup.get(c, 3) * 10 + 10 for c in codes_in],
+                color=color, line=dict(width=2, color='white'),
+                opacity=0.9,
+            ),
+            text=[title_lookup.get(c, c).split(',')[0][:30] for c in codes_in],
+            textposition='top center',
+            textfont=dict(size=9),
+            hovertext=[f"<b>{title_lookup.get(c, c)}</b><br>Job Zone: {zone_lookup.get(c, '')}<br>"
+                        f"Cluster: {cname}<br>Connections: {G.degree(c)}" for c in codes_in],
+            hoverinfo='text',
+            name=cname,
+        ))
+
+    fig = go.Figure(data=edge_traces + node_traces)
+    fig.update_layout(
+        height=700,
+        showlegend=True,
+        xaxis=dict(
+            showgrid=False, zeroline=False,
+            tickvals=[0, 1, 2],
+            ticktext=['Entry Level /<br>Operators', 'Skilled<br>Trades', 'Management /<br>Engineering'],
+            tickfont=dict(size=12, color='#333'),
+            side='bottom',
+        ),
+        yaxis=dict(
+            showgrid=True, gridcolor='rgba(200,200,200,0.3)',
+            zeroline=False,
+            tickvals=[2, 3, 4, 5],
+            ticktext=['Zone 2<br>(Entry)', 'Zone 3<br>(Mid)', 'Zone 4<br>(Advanced)', 'Zone 5<br>(Expert)'],
+            tickfont=dict(size=11, color='#333'),
+            title='Job Zone (Complexity)',
+        ),
+        margin=dict(l=80, r=20, t=30, b=60),
+        plot_bgcolor='rgba(250,250,250,1)',
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Centrality metrics table
+    st.subheader("📊 Centrality Metrics")
+    st.markdown("Which occupations are most connected (degree), most bridging (betweenness), or most reachable (PageRank)?")
+
+    degree = dict(G.degree())
+    betweenness = nx.betweenness_centrality(G)
+    pagerank = nx.pagerank(G)
+
+    centrality_df = pd.DataFrame({
+        'Occupation': [title_lookup.get(c, c) for c in our_codes],
+        'Cluster': [cluster_lookup.get(c, '') for c in our_codes],
+        'Degree': [degree.get(c, 0) for c in our_codes],
+        'Betweenness': [round(betweenness.get(c, 0), 3) for c in our_codes],
+        'PageRank': [round(pagerank.get(c, 0), 3) for c in our_codes],
+    }).sort_values('Degree', ascending=False)
+
+    st.dataframe(centrality_df, hide_index=True, use_container_width=True)
+
 
 # ================================================================
 # PAGE 3: CAREER MATCH
