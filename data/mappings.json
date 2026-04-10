@@ -1,0 +1,47 @@
+{
+  "apprentice_to_onet": {
+    "Arborist": null,
+    "Bridge Carpenter/Heavy Highway": "47-2031.00",
+    "Construction Carpenter": "47-2031.00",
+    "Construction Craft Concrete Laborer": null,
+    "Construction Craft Heavy / Highway Laborer": null,
+    "Construction Equipment Operator": "47-2073.00",
+    "Construction Specialist": null,
+    "Crane Mechanic": null,
+    "Crane Operator": "47-2073.00",
+    "Earthworks Laborer": null,
+    "Electrician": "47-2111.00",
+    "Fencing Installer": null,
+    "Firestopping Installer": null,
+    "Firestopping Technician": null,
+    "Foreman": "47-1011.00",
+    "Lead Logging Equipment Operator": null,
+    "Marine Carpenter - Heavy Civil": "47-2031.00",
+    "Solar Mechanical Installation Technician": null,
+    "Welder": null
+  },
+  "cc_to_cluster": {
+    "Building Construction Technology": "Skilled Trades",
+    "HVAC/R Technology": "Skilled Trades",
+    "Plumbing & Heating Technology": "Skilled Trades",
+    "Building Construction": "Skilled Trades",
+    "Plumbing": "Skilled Trades",
+    "Refrigeration, AC & Heating": "Skilled Trades",
+    "Plumbing & Heating": "Skilled Trades",
+    "Building Construction Tech": "Skilled Trades",
+    "Construction Technology": "Skilled Trades",
+    "Heavy Equipment Operations": "Entry Level/Operators",
+    "Heavy Equipment Maintenance": "Entry Level/Operators",
+    "Industrial Welding Techniques": "Skilled Trades"
+  },
+  "umaine_to_cluster": {
+    "Construction Engineering Technology": "Management/Engineering",
+    "Architecture (5-Year Professional Degree)": "Management/Engineering",
+    "Civil & Environmental Engineering": "Management/Engineering",
+    "Mechanical Engineering": "Management/Engineering",
+    "Electrical & Computer Engineering": "Management/Engineering",
+    "Surveying Engineering Technology": "Management/Engineering",
+    "Industrial Engineering": "Management/Engineering",
+    "Maine Engineering Pathways": "Management/Engineering"
+  }
+}

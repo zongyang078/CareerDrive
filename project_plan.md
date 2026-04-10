@@ -49,11 +49,13 @@ From 28 Excel rows → 21 unique O\*NET codes → 20 usable occupations (13-1082
 
 ## 4. Streamlit Demo
 
-| Page | Content |
-|------|---------|
-| Industry Dashboard | Company landscape, cluster/job zone distributions, supply-demand gap |
-| Clustering Explorer | PCA scatter, cluster details, radar charts, career path network graph |
-| Career Match | Skill input → matched occupations with apprenticeship/education info |
+| Page | Audience | Content |
+|------|----------|---------|
+| Industry Dashboard | MaineDOT staff | Company landscape, cluster/job zone distributions, supply-demand gap |
+| Career Path Map | All users | Interactive pyvis network — occupations connected by O*NET pathways + skill similarity |
+| Career Match | Job seekers | Plain-language background input → matched occupations with training pathways |
+
+Occupation-cluster mappings (apprenticeships, CC programs, UMaine programs) are managed centrally in `data/mappings.json`.
 
 ## 5. Division of Work
 

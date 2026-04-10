@@ -35,10 +35,17 @@ def load_apprenticeships(excel_path: str) -> pd.DataFrame:
 
 
 def load_community_college(excel_path: str) -> pd.DataFrame:
-    """Load Community College Programs data."""
+    """Load Community College Programs data.
+
+    The Excel sheet contains a second table appended below the programs
+    (initiative/funding rows with different semantics). We keep only rows
+    from known Maine community college abbreviations.
+    """
     df = pd.read_excel(excel_path, sheet_name="Community College Programs", header=1)
     df.columns = ["college", "program_name", "credentials", "link"]
     df = df.dropna(subset=["program_name"])
+    known_colleges = {"CMCC", "EMCC", "KVCC", "NMCC", "SMCC", "WCCC", "YCCC"}
+    df = df[df["college"].isin(known_colleges)]
     return df.reset_index(drop=True)
 
 
