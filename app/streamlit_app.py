@@ -3,7 +3,7 @@ CareerDrive Streamlit Demo — Refactored
 
 Three pages:
 1. Industry Dashboard — descriptive stats, company landscape, supply-demand gap
-2. Clustering Explorer — interactive PCA scatter plot with cluster details
+2. Career Path Map — interactive force-directed network — drag nodes & hover for details
 3. Career Match — input skills, get matched occupations + training pathways
 
 Run with: streamlit run app/streamlit_app.py
@@ -11,8 +11,18 @@ Run with: streamlit run app/streamlit_app.py
 
 import sys
 import json
+import warnings
 from pathlib import Path
 from collections import defaultdict
+
+# Suppress Streamlit deprecation warnings to clean up terminal UI
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', message=r".*st\.components\.v1\.html.*")
+
+import logging
+# Streamlit components deprecation is logged here
+logging.getLogger("streamlit.elements.lib.policies").setLevel(logging.ERROR)
+logging.getLogger("streamlit.deprecation_util").setLevel(logging.ERROR)
 
 BASE_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE_DIR))
@@ -30,14 +40,25 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 
 # --- Page Config ---
-st.set_page_config(page_title="CareerDrive", page_icon="\U0001f6e4\ufe0f", layout="wide")
+st.set_page_config(page_title="CareerDrive", page_icon="🏗️", layout="wide")
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+
+html, body, .stApp, .stMarkdown, p, h1, h2, h3, h4, h5, h6, li, label, .stSelectbox, .stMultiSelect {
+    font-family: 'Quicksand', sans-serif !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # --- Consistent Color Palette ---
 CLUSTER_COLORS = {
-    'Management/Engineering': '#2E86AB',
-    'Skilled Trades': '#1B998B',
-    'Entry Level/Operators': '#E8593C',
+    'Management/Engineering': '#8B4049',
+    'Skilled Trades': '#C4918A',
+    'Entry Level/Operators': '#E8C8C3',
 }
+CMAP = ['#FDF5F3', '#E8C8C3', '#C4918A', '#8B4049', '#4A2028']
 
 # --- Job Zone plain-language labels ---
 JZ_LABELS = {
@@ -123,14 +144,14 @@ def load_data():
 try:
     data = load_data()
 except FileNotFoundError as e:
-    st.error(f"数据文件缺失: {e}\n\n请先按顺序运行 notebooks 01–04 生成处理后的数据。")
+    st.error(f"Data file missing: {e}\nPlease verify the notebooks exist or paths are correct.")
     st.stop()
 except Exception as e:
-    st.error(f"数据加载失败: {e}")
+    st.error(f"Data load failed: {e}")
     st.stop()
 
 # --- Sidebar Navigation ---
-st.sidebar.title("\U0001f6e4\ufe0f CareerDrive")
+st.sidebar.title("🏗️ CareerDrive")
 st.sidebar.markdown("*Maine Construction Industry Career Map*")
 page = st.sidebar.radio("Navigate", ["Industry Dashboard", "Career Path Map", "Career Match"])
 st.sidebar.divider()
@@ -141,7 +162,7 @@ st.sidebar.markdown("Spring 2026 Final Project")
 # PAGE 1: INDUSTRY DASHBOARD
 # ================================================================
 if page == "Industry Dashboard":
-    st.title("\U0001f3d7\ufe0f Maine Construction Industry Overview")
+    st.title("🏗️ Maine Construction Industry Overview")
     st.markdown("A snapshot of the workforce ecosystem: companies, occupations, training programs, and workforce gaps.")
 
     # Key metrics
@@ -159,10 +180,16 @@ if page == "Industry Dashboard":
         st.subheader("Companies by Type")
         company_counts = data['companies']['type'].value_counts().reset_index()
         company_counts.columns = ['Type', 'Count']
-        fig = px.bar(company_counts, x='Type', y='Count', color='Type',
-                     color_discrete_sequence=px.colors.qualitative.Set2,
+        
+        # Create a gradient using the CMAP colors for company distribution
+        n_colors = len(company_counts)
+        bar_colors = [CMAP[min(len(CMAP)-1, int(i / n_colors * len(CMAP)))] for i in range(n_colors)]
+        
+        fig = px.bar(company_counts, x='Type', y='Count',
+                     color='Type',
+                     color_discrete_sequence=bar_colors,
                      text='Count')
-        fig.update_layout(showlegend=False, height=350)
+        fig.update_layout(showlegend=False, height=350, font_family="Quicksand")
         fig.update_traces(textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
@@ -172,7 +199,7 @@ if page == "Industry Dashboard":
         cluster_counts.columns = ['Cluster', 'Count']
         fig = px.pie(cluster_counts, values='Count', names='Cluster',
                      color='Cluster', color_discrete_map=CLUSTER_COLORS)
-        fig.update_layout(height=350)
+        fig.update_layout(height=350, font_family="Quicksand")
         st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
@@ -186,24 +213,24 @@ if page == "Industry Dashboard":
         jz_counts = jz_data.groupby('Job Zone').size().reset_index(name='Count')
         jz_counts['Job Zone'] = jz_counts['Job Zone'].astype(str)
         fig = px.bar(jz_counts, x='Job Zone', y='Count',
-                     color='Job Zone', color_discrete_sequence=px.colors.sequential.Teal,
+                     color='Job Zone', color_discrete_sequence=CMAP[::-1],
                      text='Count')
-        fig.update_layout(showlegend=False, height=300)
+        fig.update_layout(showlegend=False, height=300, font_family="Quicksand")
         fig.update_traces(textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
     with c4:
-        st.subheader("Cluster \u00d7 Job Zone Distribution")
+        st.subheader("Cluster × Job Zone Distribution")
         ct = pd.crosstab(data['clusters']['cluster_name'], data['clusters']['Job Zone'])
-        fig = px.imshow(ct, text_auto=True, color_continuous_scale='YlOrRd',
+        fig = px.imshow(ct, text_auto=True, color_continuous_scale=CMAP,
                         labels=dict(x='Job Zone', y='Cluster', color='Count'))
-        fig.update_layout(height=300)
+        fig.update_layout(height=300, font_family="Quicksand")
         st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
     # Supply-Demand Gap Analysis
-    st.subheader("\U0001f4ca Supply-Demand Gap Analysis")
+    st.subheader("📊 Supply-Demand Gap Analysis")
     st.markdown("""
     The **demand** side represents the 20 key occupations across 3 clusters.
     The **supply** side represents available training pathways (apprenticeships + education programs).
@@ -236,21 +263,21 @@ if page == "Industry Dashboard":
     with g1:
         fig = go.Figure()
         fig.add_trace(go.Bar(name='Occupations (Demand)', x=gap_df['Cluster'],
-                             y=gap_df['Occupations'], marker_color='#2E86AB'))
+                             y=gap_df['Occupations'], marker_color='#8B4049'))
         fig.add_trace(go.Bar(name='Apprenticeships', x=gap_df['Cluster'],
-                             y=gap_df['Apprenticeships'], marker_color='#1B998B'))
+                             y=gap_df['Apprenticeships'], marker_color='#C4918A'))
         fig.add_trace(go.Bar(name='Education Programs', x=gap_df['Cluster'],
-                             y=gap_df['Education Programs'], marker_color='#4CAF50'))
-        fig.update_layout(barmode='group', height=350, title='Supply vs Demand by Cluster')
+                             y=gap_df['Education Programs'], marker_color='#E8C8C3'))
+        fig.update_layout(barmode='group', height=350, title='Supply vs Demand by Cluster', font_family="Quicksand")
         st.plotly_chart(fig, use_container_width=True)
 
     with g2:
-        colors = ['#E8593C' if r < 1.0 else '#4CAF50' for r in gap_df['Coverage Ratio']]
+        colors = ['#8B4049' if r < 1.0 else '#C4918A' for r in gap_df['Coverage Ratio']]
         fig = go.Figure(go.Bar(x=gap_df['Cluster'], y=gap_df['Coverage Ratio'],
                                marker_color=colors, text=gap_df['Coverage Ratio']))
         fig.add_hline(y=1.0, line_dash='dash', annotation_text='1:1 Ratio')
         fig.update_layout(height=350, title='Training Coverage Ratio',
-                          yaxis_title='Supply / Demand')
+                          yaxis_title='Supply / Demand', font_family="Quicksand")
         fig.update_traces(textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
@@ -323,7 +350,7 @@ elif page == "Career Path Map":
     }
 
     # Build pyvis network
-    net = Network(height='650px', width='100%', bgcolor='#f9f9f9', font_color='#333')
+    net = Network(height='650px', width='100%', bgcolor='#FDF5F3', font_color='#2D2D2D') # Themed!
     net.barnes_hut(gravity=-8000, central_gravity=0.3, spring_length=120, spring_strength=0.05)
 
     for code in our_codes:
@@ -343,7 +370,7 @@ elif page == "Career Path Map":
             title=tooltip,
             color=CLUSTER_COLORS[cname],
             size=jz * 6 + 8,
-            font={'size': 11, 'color': '#222'},
+            font={'size': 13, 'color': '#2D2D2D', 'face': 'Quicksand, sans-serif'},
             borderWidth=2,
             borderWidthSelected=4,
         )
@@ -352,7 +379,7 @@ elif page == "Career Path Map":
         is_onet = edata.get('source') == 'onet'
         net.add_edge(
             src, dst,
-            color='rgba(80,80,80,0.5)' if is_onet else 'rgba(180,180,180,0.3)',
+            color='rgba(139,64,73,0.5)' if is_onet else 'rgba(196,145,138,0.4)', # Burgundy/Rose rgba
             width=2.0 if is_onet else 0.8,
             title='O*NET Related Occupation' if is_onet else 'High Skill Similarity (≥0.95)',
             dashes=not is_onet,
@@ -363,11 +390,11 @@ elif page == "Career Path Map":
         f'<div style="display:inline-block;margin-right:18px">'
         f'<span style="display:inline-block;width:14px;height:14px;border-radius:50%;'
         f'background:{color};margin-right:5px;vertical-align:middle"></span>'
-        f'<span style="font-size:13px">{name}</span></div>'
+        f'<span style="font-size:13px;font-family:Quicksand">{name}</span></div>'
         for name, color in CLUSTER_COLORS.items()
     ])
     legend_html += (
-        '<div style="margin-top:6px;font-size:12px;color:#666">'
+        '<div style="margin-top:6px;font-size:12px;color:#4A2028;font-family:Quicksand">'
         '<b>─── </b>O*NET Related Occupation &nbsp;&nbsp;'
         '<b style="letter-spacing:2px">- - -</b> High Skill Similarity (≥0.95) &nbsp;&nbsp;'
         'Node size = Job Zone complexity</div>'
@@ -415,10 +442,11 @@ elif page == "Career Match":
 
     st.subheader("3. Are you open to further training or education?")
     open_to_training = st.radio(
-        "",
+        "Training Preference",
         options=["Yes, I'm open to apprenticeships or programs", "I prefer roles I can enter right away"],
         index=0,
         horizontal=True,
+        label_visibility="collapsed",
     )
 
     if st.button("Find Matching Careers", type="primary"):
@@ -429,7 +457,7 @@ elif page == "Career Match":
                 if feat in X_raw.columns:
                     user_skills[feat] = exp_level
 
-        if len(user_skills) < 2:
+        if len(user_skills) < 1:
             st.warning("Please select at least one background area above.")
         else:
             valid_features = list(user_skills.keys())
@@ -474,7 +502,7 @@ elif page == "Career Match":
                     c3.metric("Match", f"{row['Match Score']}%")
 
             st.divider()
-            with st.expander("See all 20 occupations ranked"):
+            with st.expander("See all related occupations ranked"):
                 display_results = results.copy()
                 display_results['Experience Required'] = display_results['Job Zone'].map(JZ_LABELS)
                 display_results['Apprenticeship'] = display_results.index.map(
