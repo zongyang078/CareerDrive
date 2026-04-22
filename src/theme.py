@@ -45,3 +45,18 @@ COMM_COLORS = ['#8B4049', '#C4918A', '#9B5B5E', '#D4A59E', '#6B2D35']
 
 # Text cluster colors
 TEXT_CLUSTER_COLORS = ['#8B4049', '#9B5B5E', '#C4918A']
+
+# ── Font ──────────────────────────────────────────────────────────────────────
+import os as _os
+import matplotlib.font_manager as _fm
+import matplotlib as _mpl
+
+_font_path = _os.path.normpath(_os.path.join(_os.path.dirname(__file__), '..', 'Quicksand.ttf'))
+if _os.path.exists(_font_path):
+    _fm.fontManager.addfont(_font_path)
+
+
+def apply_font():
+    """Set Quicksand as the matplotlib font family. Call after sns.set_theme()."""
+    _mpl.rcParams['font.family'] = 'Quicksand'
+    _mpl.rcParams['font.sans-serif'] = ['Quicksand'] + list(_mpl.rcParams.get('font.sans-serif', []))
