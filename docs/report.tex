@@ -1,18 +1,58 @@
 \documentclass[12pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
-\graphicspath{{figures/}}
+\graphicspath{{../outputs/}}
 \usepackage{booktabs}
+\usepackage[dvipsnames,table]{xcolor}
 \usepackage{hyperref}
 \usepackage{amsmath}
 \usepackage{float}
 \usepackage{caption}
-\usepackage{enumitem}          % tighter list spacing
+\usepackage{enumitem}
 \usepackage{setspace}
 \usepackage{parskip}
-\usepackage[scaled]{helvet}    % Arial-like font (Calibri not available in LaTeX)
-\renewcommand{\familydefault}{\sfdefault}  % use sans-serif as default
+\usepackage{titlesec}
+\usepackage[scaled]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
 \onehalfspacing
+
+% ── CareerDrive color palette ──────────────────────────────
+\definecolor{cdprimary}{HTML}{8B4049}    % Burgundy
+\definecolor{cdsecondary}{HTML}{C4918A}  % Rose
+\definecolor{cdtertiary}{HTML}{E8C8C3}   % Light rose
+\definecolor{cddark}{HTML}{4A2028}       % Dark burgundy
+\definecolor{cdsurface}{HTML}{FDF5F3}    % Warm off-white
+
+% ── Hyperlink colors ───────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=cdprimary,
+  urlcolor=cdprimary,
+  citecolor=cdsecondary
+}
+
+% ── Section heading styles ─────────────────────────────────
+\titleformat{\section}
+  {\large\bfseries\color{cdprimary}}
+  {}
+  {0em}
+  {}
+  [\color{cdsecondary}\titlerule]
+
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{cdprimary}}
+  {}
+  {0em}
+  {}
+
+\titleformat{\subsubsection}
+  {\normalsize\itshape\color{cddark}}
+  {}
+  {0em}
+  {}
+
+% ── Table rule color ───────────────────────────────────────
+\arrayrulecolor{cdprimary}
 
 \date{}
 
@@ -20,12 +60,14 @@
 
 % ── Custom title page ──────────────────────────────────────
 \begin{center}
-{\LARGE\textbf{CareerDrive: Maine Construction Industry\\[0.3em]
-Career Map}}\\[0.6em]
-\url{https://github.com/zongyang078/CareerDrive}
+{\color{cdprimary}\rule{\linewidth}{2pt}}\\[0.6em]
+{\LARGE\textbf{\color{cdprimary}CareerDrive: Maine Construction Industry\\[0.3em]
+Career Map}}\\[0.4em]
+{\color{cdsecondary}\url{https://github.com/zongyang078/CareerDrive}}\\[0.4em]
+{\color{cdprimary}\rule{\linewidth}{0.8pt}}
 \end{center}
 
-\vspace{1.5em}
+\vspace{1.2em}
 
 \noindent
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ccc@{}}
@@ -203,7 +245,7 @@ by cluster respectively.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.88\linewidth]{supply_demand_gap.png}
-\caption{Supply-demand gap by cluster. Red bars indicate
+\caption{Supply-demand gap by cluster. Dark bars (right panel) indicate
 clusters where Coverage Ratio $< 1.0$. Entry Level/Operators
 has the most severe training shortfall.}
 \label{fig:gap}
@@ -235,8 +277,17 @@ features with different natural scales.
 
 \paragraph{Dimensionality reduction.}
 PCA was applied to the scaled matrix. The first principal
-component (PC1) explains 53.6\% of total variance and PC2
-explains 9.0\%, reflecting high inherent structure in the
+component (\textbf{PC1: Cognitive \& Communication Complexity})
+explains 53.6\% of total variance, capturing oral expression,
+reading comprehension, time management, and mathematical
+reasoning --- skills that distinguish higher-complexity,
+knowledge-intensive occupations from operational roles.
+The second component (\textbf{PC2: Perceptual \& Sensory
+Coordination}) explains 9.0\% of variance and is dominated by
+visual color discrimination, near vision, time-sharing, and
+auditory attention --- abilities that characterize hands-on
+operational roles. Together, PC1 and PC2 capture 62.7\% of
+total variance and reflect high inherent structure in the
 occupation feature space.
 
 \paragraph{Clustering.}
@@ -252,8 +303,11 @@ space at this scale.
 \centering
 \includegraphics[width=0.88\linewidth]{pca_scatter.png}
 \caption{PCA scatter plot with K-Means cluster assignments
-($k=3$). PC1 separates Management/Engineering from Entry Level
-clusters along the horizontal axis.}
+($k=3$). The horizontal axis (PC1: Cognitive \& Communication
+Complexity, 53.6\%) separates Management/Engineering from
+Entry Level clusters. The vertical axis (PC2: Perceptual \&
+Sensory Coordination, 9.0\%) distinguishes operational and
+hands-on roles from knowledge-intensive ones.}
 \label{fig:pca}
 \end{figure}
 
